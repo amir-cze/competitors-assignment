@@ -43,7 +43,7 @@ Different constraints, different picks: if the watchlist were 200+ JS-heavy site
 ## How it behaves as it grows
 
 - **Sources.** Claiming is `SKIP LOCKED`, so a second worker replica is extra throughput with no coordinator. Per-host politeness stays correct because it is keyed on domain, not process.
-- **Items.** Dedup (hash, then cosine ~0.92) and a “is this substantive?” gate keep the LLM off boilerplate. The daily budget is a hard stop: overflow sits in the inbox unscored, visible on `/ops`.
+- **Items.** Dedup (hash, then cosine ≥ 0.95) and a “is this substantive?” gate keep the LLM off boilerplate. The daily budget is a hard stop: overflow sits in the inbox unscored, visible on `/ops`.
 - **Teams / topics.** Scoring is one call per item, not per team; adding a fourth team is a row and a paragraph, not a new pipeline. Topics are prompt context, not a separate classifier.
 - **Retention.** Raw HTML 30 days, snapshots 90, text kept. Logs are per-run JSON, not a second database.
 

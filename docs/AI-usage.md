@@ -2,7 +2,7 @@
 
 AI assistants were used throughout, as they are in the role. Everything below was read, run, or edited by me before it landed.
 
-**Cursor (Grok 4.6)** — primary coding assistant in this repository.
+**Cursor agent (Claude)** — the only coding assistant used in this repository.
 
 Used for:
 
