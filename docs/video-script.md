@@ -3,7 +3,7 @@
 Open on the briefing. Speak to a non-technical colleague, not to an interviewer.
 
 **0:00–0:40 — what and why**  
-“This is Radar. Noma’s competitors publish constantly; the failure mode is not missing a post, it is alerting so often that Marketing mutes us. Radar watches competitor sites, scores each piece separately for Marketing, Product and R&D, and only interrupts a team when it is actually for them.”
+“This is Radar. Noma’s competitors publish constantly; the failure mode is not missing a post, it is alerting so often that Marketing mutes us. Radar watches competitor sites, scores each piece separately for Marketing, Product and R&D, and only interrupts a team when it is actually for them.” Point at one row: “Same post, once — 85 for R&D, 65 for Product, nothing for Marketing. That is the whole idea.”
 
 **0:40–1:20 — architecture in one breath**  
 Share `/ops` for two seconds, then back. “A worker pulls due sources, adapters handle feeds, sitemaps, HTML listings and watched pages, we dedup, then one model call scores all three teams. Slack or inbox is a threshold, not a vibe. Operators see health, prompts and evals; the business never does.”

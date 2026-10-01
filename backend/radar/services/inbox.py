@@ -31,14 +31,18 @@ def _with_card_relations(stmt: Select) -> Select:
 
 @dataclass
 class TeamHighlights:
+    """Scoreboard for one team: how much we interrupted them this week, and how much is queued for the digest."""
+
     team: Team
     surfaced_7d: int
-    items: list[Item]
+    immediate_7d: int
+    digest_7d: int
 
 
 @dataclass
 class Overview:
     teams: list[TeamHighlights]
+    highlights: list[Item]  # each item once, with all its assessments loaded; the UI shows team chips
     competitor_count: int
     items_7d: int
     attention: list[str]
@@ -54,25 +58,41 @@ def worker_last_seen(session: Session) -> datetime | None:
 
 def overview(session: Session, *, days: int = 7) -> Overview:
     since = utcnow() - timedelta(days=days)
-    highlights: list[TeamHighlights] = []
+    scoreboard: list[TeamHighlights] = []
     for team in list_teams(session):
-        surfaced = (
-            Assessment.team_id == team.id,
-            Assessment.created_at >= since,
-            Assessment.route.in_(SURFACED_ROUTES),
+        by_route = dict(
+            session.execute(
+                select(Assessment.route, func.count())
+                .where(
+                    Assessment.team_id == team.id,
+                    Assessment.created_at >= since,
+                    Assessment.route.in_(SURFACED_ROUTES),
+                )
+                .group_by(Assessment.route)
+            ).all()
         )
-        rows = (
-            session.scalars(
-                _with_card_relations(select(Item).join(Assessment, Assessment.item_id == Item.id))
-                .where(*surfaced)
-                .order_by(Assessment.relevance.desc(), Assessment.created_at.desc())
-                .limit(4)
-            )
-            .unique()
-            .all()
+        immediate = int(by_route.get(Route.immediate.value, 0))
+        digest = int(by_route.get(Route.digest.value, 0))
+        scoreboard.append(
+            TeamHighlights(team=team, surfaced_7d=immediate + digest, immediate_7d=immediate, digest_7d=digest)
         )
-        total = session.scalar(select(func.count()).select_from(Assessment).where(*surfaced)) or 0
-        highlights.append(TeamHighlights(team=team, surfaced_7d=int(total), items=list(rows)))
+
+    # The week's items, each once, strongest first. Which teams they concern is read off the assessments.
+    strongest = (
+        select(Assessment.item_id, func.max(Assessment.relevance).label("top"))
+        .where(Assessment.created_at >= since, Assessment.route.in_(SURFACED_ROUTES))
+        .group_by(Assessment.item_id)
+        .subquery()
+    )
+    highlights = (
+        session.scalars(
+            _with_card_relations(select(Item).join(strongest, strongest.c.item_id == Item.id))
+            .order_by(strongest.c.top.desc(), Item.first_seen_at.desc())
+            .limit(8)
+        )
+        .unique()
+        .all()
+    )
 
     comps = competitors_svc.list_competitors(session)
     attention = [c.name for c in comps if competitors_svc.health_rollup(c.sources) == "attention"]
@@ -90,7 +110,8 @@ def overview(session: Session, *, days: int = 7) -> Overview:
         .all()
     )
     return Overview(
-        teams=highlights,
+        teams=scoreboard,
+        highlights=list(highlights),
         competitor_count=len(comps),
         items_7d=int(items_7d),
         attention=attention,

@@ -87,16 +87,42 @@ def item_detail(item: Item, deliveries: list[Delivery]) -> ItemDetail:
     )
 
 
+SURFACED = {"immediate", "digest"}
+
+
+def briefing_row(item: Item) -> dict:
+    """One line of the weekly briefing: the item once, plus a chip per team it was surfaced to."""
+    concerned = sorted(
+        (a for a in item.assessments if a.route in SURFACED), key=lambda a: a.relevance, reverse=True
+    )
+    strongest = concerned[0] if concerned else None
+    return {
+        "id": str(item.id),
+        "kind": item.kind,
+        "competitor_name": item.competitor.name,
+        "title": item.headline or item.title,
+        "summary": strongest.why if strongest else item.summary,
+        "category_label": CATEGORY_LABELS.get(item.primary_category or "", item.primary_category),
+        "published_at": (item.published_at or item.first_seen_at).isoformat(),
+        "teams": [
+            {"team_key": a.team.key, "team_name": a.team.name, "relevance": a.relevance, "route": a.route}
+            for a in concerned
+        ],
+    }
+
+
 def overview(data: Overview) -> dict:
     return {
         "teams": [
             {
                 "team": team(highlight.team).model_dump(mode="json"),
                 "surfaced_7d": highlight.surfaced_7d,
-                "items": [item_card(item, highlight.team).model_dump(mode="json") for item in highlight.items],
+                "immediate_7d": highlight.immediate_7d,
+                "digest_7d": highlight.digest_7d,
             }
             for highlight in data.teams
         ],
+        "highlights": [briefing_row(item) for item in data.highlights],
         "competitor_count": data.competitor_count,
         "items_7d": data.items_7d,
         "attention": data.attention,

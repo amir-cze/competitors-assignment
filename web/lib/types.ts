@@ -106,8 +106,20 @@ export type InboxPage = {
   counts: Record<string, number>;
 };
 
+export type BriefingRow = {
+  id: string;
+  kind: string;
+  competitor_name: string;
+  title: string;
+  summary: string | null;
+  category_label: string | null;
+  published_at: string;
+  teams: { team_key: string; team_name: string; relevance: number; route: string }[];
+};
+
 export type Overview = {
-  teams: { team: Team; surfaced_7d: number; items: ItemCard[] }[];
+  teams: { team: Team; surfaced_7d: number; immediate_7d: number; digest_7d: number }[];
+  highlights: BriefingRow[];
   competitor_count: number;
   items_7d: number;
   attention: string[];
