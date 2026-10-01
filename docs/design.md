@@ -64,6 +64,8 @@ Left out on purpose: SSO / per-user identity, a Slack OAuth app, LinkedIn/Twitte
 
 Next, in order: SSO, a Slack interactivity payload so thumbs happen without opening the dashboard, Playwright for the handful of JS-only newsrooms, then a weekly “should we lower Marketing’s immediate threshold?” suggestion driven by the eval trend.
 
+The first *scaling* change is structural rather than a feature: today the source is the unit of work, so one competitor’s big publishing day holds a lane for minutes. Splitting into a discovery stage (unit = source) and a processing stage (unit = item, claimed from `items.status = 'pending'`) fixes head-of-line blocking without a broker. Measured limits, the order of bottlenecks, and the known gaps are in [bottlenecks-and-gaps.md](bottlenecks-and-gaps.md).
+
 ## Risks
 
 - **Sites that only exist in JavaScript.** Default fetch will look empty; the operator can flag `requires_js`. Until that is used, those competitors are a discovery miss, not a silent miss — the preview will say so.
