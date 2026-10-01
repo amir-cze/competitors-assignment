@@ -1,0 +1,13 @@
+# Radar on Railway: one Postgres, three services from this repo.
+# Create a project, add a Postgres plugin, then three services:
+#   api     — Dockerfile backend/Dockerfile, start: alembic upgrade head && radar-seed && radar-api
+#   worker  — same image, start: radar-worker
+#   web     — Dockerfile web/Dockerfile, start: node server.js
+#
+# Point DATABASE_URL at the plugin. Set OPENAI_API_KEY, BUSINESS_PASSWORD, OPS_TOKEN,
+# SESSION_SECRET, PUBLIC_BASE_URL. Web needs API_INTERNAL_URL=http://api.railway.internal:8000
+# (use the private DNS name Railway assigns the api service).
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "backend/Dockerfile"

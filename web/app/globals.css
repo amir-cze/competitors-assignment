@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #080b10;
+  color: #e8e2d6;
+}
+
+body {
+  font-feature-settings: "ss01" on, "cv11" on;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: #c4894a;
+  color: #080b10;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+}
+
+.score-ring {
+  background: conic-gradient(#c4894a calc(var(--score) * 1%), #1b2431 0);
+}
