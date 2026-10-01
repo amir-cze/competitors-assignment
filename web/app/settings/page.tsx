@@ -120,22 +120,28 @@ function TeamSettings({ team, topics, onSaved }: { team: Team; topics: Topic[]; 
       <Card>
         <h2 className="font-serif text-2xl">What {team.name} cares about</h2>
         <p className="mt-1 text-sm text-mist">This paragraph is injected into the scoring prompt. Rewrite it like you would brief an analyst.</p>
-        <Textarea className="mt-4 min-h-40" value={lens} onChange={(e) => setLens(e.target.value)} />
-        <div className="mt-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-mist">Topics</p>
+        <Textarea className="mt-4 min-h-48 text-sm leading-relaxed" value={lens} onChange={(e) => setLens(e.target.value)} />
+        <div className="mt-5">
+          <div className="flex items-baseline justify-between">
+            <p className="text-xs uppercase tracking-[0.16em] text-mist">Topics</p>
+            <p className="text-xs text-mist/70">Click a topic to remove it · ◦ = shared by all teams</p>
+          </div>
           <div className="mt-2 flex flex-wrap gap-2">
-            {mine.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => void dropTopic(t.id)}
-                className="rounded-full bg-white/5 px-3 py-1 text-xs text-paper hover:bg-red-400/10"
-                title={t.team_id ? "Remove" : "Shared topic — click to remove"}
-              >
-                {t.name}
-                {t.team_key === team.key && t.team_id ? "" : " · shared"}
-              </button>
-            ))}
+            {mine.map((t) => {
+              const shared = !(t.team_key === team.key && t.team_id);
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => void dropTopic(t.id)}
+                  className="rounded-full bg-white/5 px-3 py-1 text-xs text-paper transition hover:bg-red-400/10 hover:text-red-200"
+                  title={shared ? "Shared topic — click to remove for everyone" : "Click to remove"}
+                >
+                  {shared ? <span className="mr-1.5 text-mist">◦</span> : null}
+                  {t.name}
+                </button>
+              );
+            })}
           </div>
           <form onSubmit={(e) => void addTopic(e)} className="mt-3 flex gap-2">
             <Input value={topicName} onChange={(e) => setTopicName(e.target.value)} placeholder="Add a topic" className="py-2" />
@@ -163,14 +169,15 @@ function TeamSettings({ team, topics, onSaved }: { team: Team; topics: Topic[]; 
           <input type="checkbox" checked={slackOn} onChange={(e) => setSlackOn(e.target.checked)} className="accent-copper-500" />
           Send to Slack
         </label>
-        <Field label="Slack incoming webhook" hint={team.slack_webhook_masked ? `Currently ${team.slack_webhook_masked}` : "Not connected"}>
-          <Input
-            value={webhook}
-            onChange={(e) => setWebhook(e.target.value)}
-            placeholder="https://hooks.slack.com/services/…"
-            className="mt-1"
-          />
-        </Field>
+        <div className="mt-4">
+          <Field label="Slack incoming webhook" hint={team.slack_webhook_masked ? `Connected · ${team.slack_webhook_masked}` : "Not connected"}>
+            <Input
+              value={webhook}
+              onChange={(e) => setWebhook(e.target.value)}
+              placeholder="https://hooks.slack.com/services/…"
+            />
+          </Field>
+        </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button onClick={() => void save()} disabled={busy}>
             Save

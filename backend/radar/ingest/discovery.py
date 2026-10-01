@@ -117,19 +117,27 @@ def _registrable(url: str) -> str:
     return f"{ext.domain}.{ext.suffix}" if ext.suffix else ext.domain
 
 
+NAME_SEPARATORS = (" | ", " - ", " – ", " — ", ": ")
+
+
+def _strip_tagline(name: str) -> str:
+    """'Zenity | Secure AI Agents Everywhere' -> 'Zenity'. The brand is almost always the shortest part."""
+    name = name.strip()
+    for sep in NAME_SEPARATORS:
+        if sep in name:
+            parts = [p.strip() for p in name.split(sep) if p.strip()]
+            if parts:
+                return min(parts, key=len)
+    return name[:60]
+
+
 def _site_name(soup: BeautifulSoup | None, url: str) -> str:
     if soup is not None:
         og = soup.find("meta", attrs={"property": "og:site_name"})
         if og and og.get("content"):
-            return og["content"].strip()
+            return _strip_tagline(og["content"])
         if soup.title and soup.title.string:
-            title = soup.title.string.strip()
-            for sep in (" | ", " - ", " – ", " — ", ": "):
-                if sep in title:
-                    parts = [p.strip() for p in title.split(sep) if p.strip()]
-                    if parts:
-                        return min(parts, key=len)
-            return title[:60]
+            return _strip_tagline(soup.title.string)
     host = urlparse(url).netloc.replace("www.", "")
     return host.split(".")[0].capitalize()
 

@@ -1,7 +1,9 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { twMerge } from "tailwind-merge";
 
+/** Join class names; later Tailwind utilities override earlier ones (so `w-48` beats a base `w-full`). */
 export function cn(...parts: Array<string | false | null | undefined>) {
-  return parts.filter(Boolean).join(" ");
+  return twMerge(parts.filter(Boolean).join(" "));
 }
 
 export function Button({
@@ -38,7 +40,7 @@ export function Field({
 }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-xs uppercase tracking-[0.16em] text-mist">{label}</span>
+      <span className="block text-xs uppercase tracking-[0.16em] text-mist">{label}</span>
       {children}
       {hint ? <span className="block text-xs text-mist/80">{hint}</span> : null}
     </label>
@@ -48,16 +50,18 @@ export function Field({
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-ink-900 px-3 py-2.5 text-paper outline-none ring-copper-500/40 placeholder:text-mist/50 focus:ring-2";
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn(inputClass, props.className)} {...props} />;
+// `className` is pulled out before the spread so a caller's extra classes extend the base styles
+// instead of replacing them.
+export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  return <input className={cn(inputClass, className)} {...props} />;
 }
 
-export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={cn(inputClass, "min-h-32 resize-y", props.className)} {...props} />;
+export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea className={cn(inputClass, "min-h-32 resize-y", className)} {...props} />;
 }
 
-export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn(inputClass, props.className)} {...props} />;
+export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={cn(inputClass, className)} {...props} />;
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
@@ -89,11 +93,13 @@ export function Pill({
   );
 }
 
-export function Score({ value }: { value: number | null | undefined }) {
+export function Score({ value, size = "md" }: { value: number | null | undefined; size?: "sm" | "md" }) {
   if (value == null) return <span className="font-mono text-xs text-mist">—</span>;
+  const outer = size === "sm" ? "h-9 w-9" : "h-11 w-11";
+  const inner = size === "sm" ? "h-7 w-7 text-xs" : "h-9 w-9 text-sm";
   return (
-    <span className="score-ring grid h-11 w-11 shrink-0 place-items-center rounded-full" style={{ ["--score" as string]: value }}>
-      <span className="grid h-9 w-9 place-items-center rounded-full bg-ink-900 font-serif text-sm text-paper">{value}</span>
+    <span className={cn("score-ring grid shrink-0 place-items-center rounded-full", outer)} style={{ ["--score" as string]: value }}>
+      <span className={cn("grid place-items-center rounded-full bg-ink-900 font-serif text-paper", inner)}>{value}</span>
     </span>
   );
 }

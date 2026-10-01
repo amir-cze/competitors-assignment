@@ -43,8 +43,8 @@ export default function Inbox() {
         </div>
         {data ? (
           <div className="flex gap-2 text-xs text-mist">
-            <Pill tone="copper">{data.counts.surfaced ?? 0} for you</Pill>
-            <Pill>{data.counts.all ?? 0} total</Pill>
+            <Pill tone="copper">{(data.counts.immediate ?? 0) + (data.counts.digest ?? 0)} for you</Pill>
+            <Pill>{data.total} total</Pill>
           </div>
         ) : null}
       </div>

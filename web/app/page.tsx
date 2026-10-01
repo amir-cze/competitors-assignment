@@ -64,7 +64,7 @@ export default function BriefingPage() {
                       <p className="text-sm text-mist">Quiet for {team.name}. That is the point.</p>
                     ) : (
                       items.slice(0, 3).map((item) => (
-                        <ItemRow key={item.id} item={item} teamKey={team.key} onChange={reload} />
+                        <ItemRow key={item.id} item={item} teamKey={team.key} onChange={reload} compact />
                       ))
                     )}
                   </div>
