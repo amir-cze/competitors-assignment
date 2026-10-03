@@ -1,6 +1,7 @@
 """Request and response models, grouped by the surface that uses them."""
 
 from radar.api.schemas.auth import LoginIn, OpsLoginIn
+from radar.api.schemas.company import CompanyIn, CompanyOut
 from radar.api.schemas.competitors import (
     CompetitorIn,
     CompetitorOut,
@@ -24,6 +25,8 @@ from radar.api.schemas.topics import TopicIn, TopicOut
 
 __all__ = [
     "AssessmentOut",
+    "CompanyIn",
+    "CompanyOut",
     "CompetitorIn",
     "CompetitorOut",
     "CompetitorPatch",

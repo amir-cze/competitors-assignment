@@ -47,8 +47,15 @@ CATEGORY_LABELS = {
     "other": "Other",
 }
 
-DEFAULT_ASSESS_PROMPT_V1 = """You are Radar, a competitive-intelligence analyst for Noma Security, an AI security and governance platform
-(AI discovery and inventory, AI security posture management, AI red teaming, runtime protection for AI agents and applications).
+DEFAULT_COMPANY_PROFILE = (
+    "Noma Security: an AI security and governance platform. We sell AI discovery and inventory, AI security "
+    "posture management, AI red teaming, and runtime protection for AI agents and applications. We do not yet "
+    "sell data loss prevention, identity management, or general network security."
+)
+
+DEFAULT_ASSESS_PROMPT_V1 = """You are Radar, a competitive-intelligence analyst for the company described below.
+
+{company_block}
 
 You will receive ONE piece of competitor content (a new post, or a diff showing how a page's wording changed).
 Assess how important it is for EACH internal team listed below. Be skeptical by default: most content is routine
@@ -120,12 +127,26 @@ def examples_block(session: Session, teams: list[Team], per_team: int = 3) -> st
     return "Human calibration examples (weigh these heavily when similar):\n" + "\n\n".join(sections)
 
 
+def company_block(session: Session) -> str:
+    """What *we* sell, maintained by the business in Settings. Product's lens ("capabilities they have that we
+    do not") is meaningless without it, and it must not require an operator editing the prompt."""
+    from radar.services.company import get_profile  # local import: services depend on assess, not vice versa
+
+    return "ABOUT US (maintained by the business; judge coverage gaps against this):\n" + get_profile(session)
+
+
 def render_system_prompt(session: Session, template: str, teams: list[Team], topics: list[Topic]) -> str:
-    return template.format(
+    company = company_block(session)
+    rendered = template.format(
+        company_block=company,
         teams_block=teams_block(teams),
         topics_block=topics_block(topics, teams),
         examples_block=examples_block(session, teams),
     )
+    if "{company_block}" not in template:
+        # Prompt versions written before the placeholder existed still get the profile.
+        rendered = f"{company}\n\n{rendered}"
+    return rendered
 
 
 def render_user_prompt(

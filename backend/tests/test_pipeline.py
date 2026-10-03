@@ -80,9 +80,30 @@ def test_listing_to_assessments_to_slack(db, deps, fake_llm, fetcher, notifier, 
     assert src_health.health == "healthy" and src_health.consecutive_failures == 0
     assert src_health.baseline_items_per_run == 3.0
 
-    # The prompt the model saw contains the business's lenses, not just the item.
+    # The prompt the model saw contains the business's lenses and our own profile, not just the item.
     system = fake_llm.calls[0]["system"].lower()
     assert "positioning" in system and "technical" in system
+    assert "about us" in system and "runtime protection" in system  # default profile until the business edits it
+
+
+def test_company_profile_edit_reaches_the_prompt(db, deps, fake_llm, fetcher, teams):
+    """The business, not an engineer, decides what "we sell" means; the next item is scored against it."""
+    from radar.services import company
+
+    assert company.is_default(db)
+    company.set_profile(db, "Acme Corp: we sell a firewall for LLM prompts. We do not sell agent runtime security.")
+    assert not company.is_default(db)
+
+    comp, src = make_competitor(db)
+    fetcher.pages["https://acme.test/blog"] = LISTING
+    for slug in ("mcp-gateway-launch", "series-b", "webinar-invite"):
+        fetcher.pages[f"https://acme.test/blog/{slug}"] = article(slug, f"Body for {slug}. ")
+    fake_llm.scripted[ItemAssessmentOut] = [scripted("x", "other", {"marketing": 10, "product": 10, "rnd": 10})] * 3
+    deps.pipeline.process_source(db, src.id)
+
+    system = fake_llm.calls[0]["system"]
+    assert "ABOUT US" in system and "firewall for LLM prompts" in system
+    assert "Noma Security" not in system  # the hard-coded default is gone once the business writes its own
 
 
 def test_rerun_is_idempotent(db, deps, fake_llm, fetcher, teams):

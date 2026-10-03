@@ -1,3 +1,5 @@
+export type CompanyProfile = { text: string; is_default: boolean };
+
 export type Team = {
   id: string;
   key: string;

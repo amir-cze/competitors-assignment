@@ -5,11 +5,12 @@ import { BusinessShell } from "@/components/shell";
 import { Banner, Button, Card, Field, Input, Pill, Spinner, Textarea } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useApi, useBusy } from "@/lib/hooks";
-import type { Team, Topic } from "@/lib/types";
+import type { CompanyProfile, Team, Topic } from "@/lib/types";
 
 export default function SettingsPage() {
   const teams = useApi<Team[]>("/api/teams");
   const topics = useApi<Topic[]>("/api/topics");
+  const company = useApi<CompanyProfile>("/api/company");
   const [active, setActive] = useState("marketing");
   const team = teams.data?.find((t) => t.key === active) || teams.data?.[0];
 
@@ -19,7 +20,9 @@ export default function SettingsPage() {
       <p className="mt-2 max-w-xl text-mist">
         Each team writes, in plain language, what they care about. Radar uses that — not a shared score — to decide who to interrupt.
       </p>
-      <div className="mt-8 flex gap-2">
+      {company.data ? <CompanyCard key={company.data.text} profile={company.data} onSaved={company.reload} /> : null}
+      <h2 className="mt-10 font-serif text-2xl">Teams</h2>
+      <div className="mt-4 flex gap-2">
         {(teams.data || []).map((t) => (
           <button
             key={t.key}
@@ -45,6 +48,39 @@ export default function SettingsPage() {
         />
       ) : null}
     </BusinessShell>
+  );
+}
+
+function CompanyCard({ profile, onSaved }: { profile: CompanyProfile; onSaved: () => void }) {
+  const { run, busy, error } = useBusy();
+  const [text, setText] = useState(profile.text);
+  const dirty = text.trim() !== profile.text.trim();
+
+  async function save() {
+    await run(async () => {
+      await api("/api/company", { method: "PUT", body: JSON.stringify({ text }) });
+      onSaved();
+    });
+  }
+
+  return (
+    <Card className="mt-8">
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="font-serif text-2xl">What we sell</h2>
+        {profile.is_default ? <Pill tone="mist">Starter text — edit it</Pill> : null}
+      </div>
+      <p className="mt-1 max-w-2xl text-sm text-mist">
+        Product&apos;s lens is &ldquo;capabilities they have that we do not&rdquo;. Radar can only judge that against this paragraph. Keep it current when
+        positioning or the product line changes; every new item is scored against the latest version.
+      </p>
+      <Textarea className="mt-4 min-h-28 text-sm leading-relaxed" value={text} onChange={(e) => setText(e.target.value)} />
+      <div className="mt-3 flex items-center gap-3">
+        <Button onClick={() => void save()} disabled={busy || !dirty}>
+          Save
+        </Button>
+        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+      </div>
+    </Card>
   );
 }
 

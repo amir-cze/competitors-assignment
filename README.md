@@ -45,7 +45,7 @@ npm run dev               # :3000, proxies /api to the backend
 
 | Path | Who | What |
 | --- | --- | --- |
-| `/` | Marketing, Product, R&D | Briefing, per-team inbox, watchlist (paste a URL), lenses, topics, Slack |
+| `/` | Marketing, Product, R&D | Briefing, per-team inbox, watchlist (paste a URL), what we sell, lenses, topics, Slack |
 | `/ops` | Whoever keeps it running | Sources, runs, prompts, golden-set evals, heartbeat and spend |
 | `/api/docs` | Operators | OpenAPI |
 

@@ -2,13 +2,13 @@
 
 from fastapi import FastAPI
 
-from radar.api.routes.business import auth, inbox, overview, teams, topics, watchlist
+from radar.api.routes.business import auth, company, inbox, overview, teams, topics, watchlist
 from radar.api.routes.ops import auth as ops_auth
 from radar.api.routes.ops import evals, prompts, sources, system
 
 
 def register_routes(app: FastAPI) -> None:
-    for module in (auth, overview, teams, topics, watchlist, inbox):
+    for module in (auth, overview, teams, topics, company, watchlist, inbox):
         app.include_router(module.router, prefix="/api")
     for module in (ops_auth, sources, prompts, evals, system):
         app.include_router(module.router, prefix="/api/ops")
