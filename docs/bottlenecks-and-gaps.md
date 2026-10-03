@@ -79,6 +79,27 @@ the queue; splitting stages does not require a broker. A queue adds Redis/Rabbit
 process to watch, and the item would still take 8 s. Decision rule: adopt a broker when the render pool exists or when
 the system passes ~1,000 sources, whichever comes first.
 
+## Horizontal scaling: what happens with N replicas
+
+Everything stateful is in Postgres, so every process is disposable. `docker compose up --scale worker=3` works today.
+There is no leader election; instead each job is either partitioned by a claim or safe to run on every replica.
+
+| Process / job | With N replicas | Why it is safe |
+| --- | --- | --- |
+| API | N stateless servers behind any load balancer | Auth is a signed cookie or a header token; no server-side session, no caches that matter |
+| Web (Next.js) | N stateless servers | Pure proxy to the API |
+| Worker `tick` (collection) | Due sources are **divided** between replicas | `due_source_ids` claims with `FOR UPDATE SKIP LOCKED` and stamps `claimed_at` in the same transaction |
+| Immediate Slack sends | Exactly one per item × team | `deliveries.dedupe_key UNIQUE`; the second writer fails the constraint and rolls back |
+| `heartbeat` (every 60 s) | Runs on every replica | Last write wins on one `system_state` row; it answers "is *a* worker alive", which is the question |
+| `digests` (hourly :05) | Runs on every replica, **sends once** | `send()` keys the delivery `digest:{team}:{date}`; same UNIQUE constraint, so N callers → one Slack message |
+| `nightly` prune | Runs on every replica | Idempotent: `DELETE … WHERE fetched_at < cutoff` |
+| `nightly` eval | **Claimed once per day** | `claim_once()` inserts `job:nightly_eval:{date}` into `system_state` with `ON CONFLICT DO NOTHING`; the winner runs the golden set, the rest log `eval_skipped`. Without this, N replicas meant N eval runs and N× the eval's LLM spend |
+
+What does *not* scale with replicas: per-host politeness (bottleneck 3), the in-process quota breaker (each replica
+discovers "OpenAI has no credits" with one failed call of its own, then stops), and Postgres itself, which is the
+queue, the vector index and the store. The daily LLM budget *does* hold across replicas because it is summed from the
+`llm_usage` table on every call, not tracked in memory.
+
 ## Technical gaps (known, deliberate)
 
 | Gap | Impact today | Fix |

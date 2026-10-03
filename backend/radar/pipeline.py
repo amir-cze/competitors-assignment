@@ -12,6 +12,7 @@ import uuid
 from datetime import timedelta
 
 from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, joinedload
 
 from radar.assess.llm import BudgetExceeded
@@ -561,6 +562,23 @@ def due_source_ids(session: Session, limit: int) -> list[uuid.UUID]:
     if ids:
         session.commit()
     return ids
+
+
+def claim_once(session: Session, job: str, *, period: str) -> bool:
+    """Cross-replica "run exactly once per period" for jobs that are not idempotent (the nightly eval).
+
+    First worker to INSERT `job:{job}:{period}` into system_state wins; everyone else gets False.
+    No lock to leak and nothing to clean up: the row doubles as the record that the job ran.
+    """
+    stmt = (
+        pg_insert(SystemState)
+        .values(key=f"job:{job}:{period}", value={"claimed_at": utcnow().isoformat()})
+        .on_conflict_do_nothing(index_elements=[SystemState.key])
+        .returning(SystemState.key)  # RETURNING yields no row on conflict; rowcount is unreliable for ORM inserts
+    )
+    won = session.execute(stmt).first() is not None
+    session.commit()
+    return won
 
 
 def prune_retention(session: Session, settings: Settings) -> dict:

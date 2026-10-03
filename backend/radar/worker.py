@@ -5,7 +5,9 @@
 - every hour at :05: send team digests that are due
 - nightly: golden-set evaluation, retention pruning
 
-Run more replicas for more throughput; claiming is safe across processes.
+Run more replicas for more throughput. Source claiming is SKIP LOCKED, digests are
+idempotent via Delivery.dedupe_key, the nightly eval is claimed once per day via
+system_state; heartbeat and prune are harmless to repeat.
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ from radar.container import Deps, build_deps
 from radar.db import session_scope
 from radar.logging import configure_logging, get_logger
 from radar.models import SystemState, utcnow
-from radar.pipeline import due_source_ids, prune_retention
+from radar.pipeline import claim_once, due_source_ids, prune_retention
 
 log = get_logger(__name__)
 
@@ -109,6 +111,13 @@ class Worker:
         try:
             with session_scope() as session:
                 log.info("worker.pruned", **prune_retention(session, self._deps.settings))
+            # Prune is idempotent; the eval is not (it spends LLM budget and writes an EvalRun),
+            # so with several worker replicas only the one that wins the claim runs it.
+            today = utcnow().date().isoformat()
+            with session_scope() as session:
+                if not claim_once(session, "nightly_eval", period=today):
+                    log.info("worker.eval_skipped", reason="claimed_by_other_replica", period=today)
+                    return
             with session_scope() as session:
                 run = self._deps.evaluator.run(session, trigger="schedule")
                 log.info("worker.eval_done", n=run.n_items, metrics=run.metrics)
