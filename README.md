@@ -73,6 +73,7 @@ CI (GitHub Actions) runs ruff, pytest against Postgres+pgvector, and a Next.js p
 ## Docs
 
 - [docs/design.md](docs/design.md) — architecture, choices, scale, quality loop, risks
+- [docs/tutorial.md](docs/tutorial.md) — every screen and button, what happens underneath, and the questions you will get
 - [docs/backend-walkthrough.md](docs/backend-walkthrough.md) — what triggers a collection, the per-source pipeline, and how everything is stored
 - [docs/bottlenecks-and-gaps.md](docs/bottlenecks-and-gaps.md) — where the limits are, measured; what changes first as it grows; known gaps
 - [docs/video-script.md](docs/video-script.md) — 5-minute walkthrough

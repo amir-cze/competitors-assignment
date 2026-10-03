@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BusinessShell } from "@/components/shell";
 import { RoutePill } from "@/components/item-card";
 import { Banner, Button, Card, Pill, Score, Spinner, Textarea } from "@/components/ui";
@@ -12,10 +12,14 @@ import type { ItemDetail } from "@/lib/types";
 
 export default function ItemPage() {
   const { id } = useParams<{ id: string }>();
-  const team = useSearchParams().get("team") || "";
+  const search = useSearchParams();
+  const team = search.get("team") || "";
+  const fromSlack = search.get("verdict"); // the 👍 / 👎 buttons in Slack deep-link here with the verdict
   const { data, error, loading, reload } = useApi<ItemDetail>(`/api/items/${id}`);
   const { run, busy, error: voteError } = useBusy();
   const [reason, setReason] = useState("");
+  const [recordedFromSlack, setRecordedFromSlack] = useState(false);
+  const autoVoted = useRef(false);
 
   async function vote(verdict: "useful" | "not_useful") {
     if (!team) return;
@@ -27,6 +31,16 @@ export default function ItemPage() {
       reload();
     });
   }
+
+  useEffect(() => {
+    if (!data || !team || autoVoted.current) return;
+    if (fromSlack !== "useful" && fromSlack !== "not_useful") return;
+    autoVoted.current = true;
+    const already = data.feedback.find((f) => f.team_key === team);
+    if (already?.verdict === fromSlack) return;
+    void vote(fromSlack).then(() => setRecordedFromSlack(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, team, fromSlack]);
 
   return (
     <BusinessShell>
@@ -117,6 +131,7 @@ export default function ItemPage() {
                 {data.feedback.find((f) => f.team_key === team) ? (
                   <p className="mt-3 text-xs text-mist">
                     Marked {data.feedback.find((f) => f.team_key === team)?.verdict.replace("_", " ")}
+                    {recordedFromSlack ? " — recorded from your Slack click. Add a reason above if you like." : ""}
                   </p>
                 ) : null}
               </Card>
