@@ -191,10 +191,10 @@ function TeamSettings({ team, topics, onSaved }: { team: Team; topics: Topic[]; 
       <Card>
         <h2 className="font-serif text-2xl">When to interrupt</h2>
         <div className="mt-4 grid grid-cols-3 gap-3">
-          <Field label="Slack now" hint="75 = interrupt">
+          <Field label="Send to Slack at" hint="Score that interrupts someone's day">
             <Input type="number" min={0} max={100} value={immediate} onChange={(e) => setImmediate(e.target.value)} />
           </Field>
-          <Field label="Daily digest" hint="Below this stays in inbox">
+          <Field label="Daily digest at" hint="Below this: filed, nobody is told">
             <Input type="number" min={0} max={100} value={digest} onChange={(e) => setDigest(e.target.value)} />
           </Field>
           <Field label="Digest hour UTC">

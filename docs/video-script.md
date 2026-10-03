@@ -21,7 +21,7 @@ Say out loud: “They pasted a URL and edited two paragraphs. They did not pick 
 “Three decisions the brief left to me. One: three outcomes per team — interrupt, digest, or just file it — because a system that alerts on everything gets muted. Two: the business writes what each team cares about *and* what we sell, in plain English, and that is literally what the model reads. Three: quiet is a result, not a bug — the briefing says so.”
 
 **2:40–3:40 — what it produces**  
-Open Marketing inbox. Read one card: competitor, score, why, evidence quote. Open the item. If a wording-change exists, show before/after. Mark one Yes and one No. Mention Slack only if a test message landed; otherwise say “same card would have posted above 75.”
+Open Marketing inbox. Read one card: competitor, score, why, evidence quote. Switch to “Everything scanned” for two seconds: “this is what Radar decided *not* to show them.” Open the item. If a wording-change exists, show before/after. Mark one Useful and one Not useful. Mention Slack only if a test message landed; otherwise say “same card would have posted above 75.”
 
 **3:40–4:20 — how we know it is useful**  
 `/ops` → Evals. Point at golden-set size, last precision/recall per team, the disagreements queue, “Run golden eval.” “Thumbs from the inbox become labels. Labels become a nightly score. Prompt versions are how we tell a regression from a bad week.”

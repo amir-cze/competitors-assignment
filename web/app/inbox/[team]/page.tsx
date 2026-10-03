@@ -6,14 +6,30 @@ import { BusinessShell } from "@/components/shell";
 import { ItemRow } from "@/components/item-card";
 import { Banner, Empty, Input, Pill, Select, Spinner } from "@/components/ui";
 import { useApi } from "@/lib/hooks";
-import type { InboxPage } from "@/lib/types";
+import type { InboxPage, Team } from "@/lib/types";
 
 const VIEWS = [
-  { id: "surfaced", label: "For you" },
-  { id: "all", label: "Everything" },
-  { id: "changes", label: "Wording changes" },
-  { id: "starred", label: "Marked useful" },
+  { id: "surfaced", label: (t?: Team) => `Flagged for ${t?.name ?? "you"}` },
+  { id: "all", label: () => "Everything scanned" },
+  { id: "changes", label: () => "Page wording changes" },
+  { id: "starred", label: () => "Marked useful" },
 ];
+
+function describeView(view: string, t?: Team) {
+  const who = t?.name ?? "this team";
+  switch (view) {
+    case "surfaced":
+      return `Scored ${t?.digest_threshold ?? 50} or more for ${who}: sent to Slack or queued for the daily digest. This is what Radar thinks deserves your attention.`;
+    case "all":
+      return `Every item Radar read and scored for ${who}, including the ones below the threshold that were filed without telling anyone. Mark one “Useful” here and Radar learns it missed something.`;
+    case "changes":
+      return "Not new posts — pages whose wording changed (homepage, pricing, product pages). Open one to see before and after.";
+    case "starred":
+      return `Items ${who} marked useful. Your saved list, and part of what the scoring is calibrated against.`;
+    default:
+      return "";
+  }
+}
 
 export default function Inbox() {
   const params = useParams<{ team: string }>();
@@ -43,8 +59,8 @@ export default function Inbox() {
         </div>
         {data ? (
           <div className="flex gap-2 text-xs text-mist">
-            <Pill tone="copper">{(data.counts.immediate ?? 0) + (data.counts.digest ?? 0)} for you</Pill>
-            <Pill>{data.total} total</Pill>
+            <Pill tone="copper">{(data.counts.immediate ?? 0) + (data.counts.digest ?? 0)} flagged</Pill>
+            <Pill>{data.total} scanned</Pill>
           </div>
         ) : null}
       </div>
@@ -57,7 +73,7 @@ export default function Inbox() {
             onClick={() => setView(v.id)}
             className={`rounded-full px-3 py-1.5 text-sm ${view === v.id ? "bg-white/10 text-paper" : "text-mist hover:text-paper"}`}
           >
-            {v.label}
+            {v.label(data?.team)}
           </button>
         ))}
         <span className="flex-1" />
@@ -84,15 +100,16 @@ export default function Inbox() {
           <option value="compliance_or_certification">Compliance</option>
         </Select>
       </div>
+      <p className="mt-3 max-w-3xl text-xs leading-relaxed text-mist/80">{describeView(view, data?.team)}</p>
 
-      <div className="mt-8">
+      <div className="mt-6">
         {loading ? <Spinner label="Reading the inbox…" /> : null}
         {error ? <Banner tone="bad">{error}</Banner> : null}
         {data && !loading && data.items.length === 0 ? (
-          <Empty title={view === "surfaced" ? "Nothing that needs you right now." : "No pieces in this view."}>
+          <Empty title={view === "surfaced" ? "Nothing that needs you right now." : "Nothing in this view."}>
             {view === "surfaced"
               ? "Quiet is a feature. When something scores high enough for this team, it lands here — and in Slack if you turned that on."
-              : "Try a wider window, or switch to Everything."}
+              : "Try a wider time window, or switch to “Everything scanned”."}
           </Empty>
         ) : null}
         {data ? (
