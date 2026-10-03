@@ -32,6 +32,15 @@ export default function ItemPage() {
     });
   }
 
+  async function withdraw() {
+    if (!team) return;
+    await run(async () => {
+      await api(`/api/items/${id}/feedback/${team}`, { method: "DELETE" });
+      setRecordedFromSlack(false);
+      reload();
+    });
+  }
+
   useEffect(() => {
     if (!data || !team || autoVoted.current) return;
     if (fromSlack !== "useful" && fromSlack !== "not_useful") return;
@@ -120,18 +129,29 @@ export default function ItemPage() {
                   onChange={(e) => setReason(e.target.value)}
                 />
                 <div className="mt-3 flex gap-2">
-                  <Button disabled={busy} onClick={() => void vote("useful")}>
-                    Yes
+                  <Button
+                    variant={data.feedback.find((f) => f.team_key === team)?.verdict === "useful" ? "primary" : "ghost"}
+                    disabled={busy}
+                    onClick={() => void vote("useful")}
+                  >
+                    Useful
                   </Button>
-                  <Button variant="ghost" disabled={busy} onClick={() => void vote("not_useful")}>
-                    No
+                  <Button
+                    variant={data.feedback.find((f) => f.team_key === team)?.verdict === "not_useful" ? "danger" : "ghost"}
+                    disabled={busy}
+                    onClick={() => void vote("not_useful")}
+                  >
+                    Not useful
                   </Button>
                 </div>
                 {voteError ? <p className="mt-2 text-xs text-red-300">{voteError}</p> : null}
                 {data.feedback.find((f) => f.team_key === team) ? (
                   <p className="mt-3 text-xs text-mist">
                     Marked {data.feedback.find((f) => f.team_key === team)?.verdict.replace("_", " ")}
-                    {recordedFromSlack ? " — recorded from your Slack click. Add a reason above if you like." : ""}
+                    {recordedFromSlack ? " — recorded from your Slack click. Add a reason above if you like." : "."}{" "}
+                    <button type="button" className="underline hover:text-paper" disabled={busy} onClick={() => void withdraw()}>
+                      Withdraw
+                    </button>
                   </p>
                 ) : null}
               </Card>

@@ -10,7 +10,7 @@ from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session, joinedload
 
 from radar.errors import NotFound
-from radar.eval.metrics import promote_to_golden
+from radar.eval.metrics import promote_to_golden, withdraw_from_golden
 from radar.models import Assessment, Competitor, Delivery, Feedback, Item, Route, SystemState, Team, utcnow
 from radar.services import competitors as competitors_svc
 from radar.services.teams import get_team, list_teams
@@ -227,6 +227,9 @@ def give_feedback(
         fb = Feedback(item_id=item.id, team_id=team.id, verdict=verdict, reason=reason)
         session.add(fb)
     else:
+        if fb.promoted_to_golden:
+            # A changed mind must not leave the old label in the test set.
+            withdraw_from_golden(session, item.id, team.key)
         fb.verdict = verdict
         fb.reason = reason
         fb.created_at = utcnow()
@@ -234,6 +237,7 @@ def give_feedback(
     session.flush()
 
     # A disagreement with the model is the most informative label we can get: promote it to the golden set.
+    # Agreements stay as calibration examples and metrics only; they would not test anything.
     assessment = next((a for a in item.assessments if a.team_id == team.id), None)
     if assessment is not None:
         surfaced = assessment.route in SURFACED_ROUTES
@@ -244,10 +248,14 @@ def give_feedback(
 
 
 def clear_feedback(session: Session, item_id: uuid.UUID, team_key: str) -> None:
+    """Undo a vote. If the vote had become a golden label, that label goes with it."""
     team = get_team(session, team_key)
     fb = session.scalar(select(Feedback).where(Feedback.item_id == item_id, Feedback.team_id == team.id))
-    if fb:
-        session.delete(fb)
+    if fb is None:
+        return
+    if fb.promoted_to_golden:
+        withdraw_from_golden(session, item_id, team.key)
+    session.delete(fb)
 
 
 def competitor_names(session: Session) -> dict[uuid.UUID, str]:

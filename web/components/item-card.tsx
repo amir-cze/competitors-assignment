@@ -25,13 +25,20 @@ export function ItemRow({
   const title = item.headline || item.title;
   const dest = href || `/items/${item.id}${teamKey ? `?team=${teamKey}` : ""}`;
 
+  const current = item.feedback?.verdict;
+
   async function vote(verdict: "useful" | "not_useful") {
     if (!teamKey) return;
     await run(async () => {
-      await api(`/api/items/${item.id}/feedback`, {
-        method: "POST",
-        body: JSON.stringify({ team_key: teamKey, verdict }),
-      });
+      if (current === verdict) {
+        // Clicking the selected answer again withdraws it (and any golden label it created).
+        await api(`/api/items/${item.id}/feedback/${teamKey}`, { method: "DELETE" });
+      } else {
+        await api(`/api/items/${item.id}/feedback`, {
+          method: "POST",
+          body: JSON.stringify({ team_key: teamKey, verdict }),
+        });
+      }
       onChange?.();
     });
   }
@@ -40,20 +47,20 @@ export function ItemRow({
     <div className="flex items-center gap-1.5" title="Your answer teaches Radar what this team actually wants to see">
       <span className="mr-1 text-[11px] text-mist/70">Worth your time?</span>
       <Button
-        variant={item.feedback?.verdict === "useful" ? "primary" : "ghost"}
+        variant={current === "useful" ? "primary" : "ghost"}
         className="px-2.5 py-1 text-xs"
         disabled={busy}
         onClick={() => void vote("useful")}
-        title="Yes — show me more like this"
+        title={current === "useful" ? "Click again to withdraw" : "Yes — show me more like this"}
       >
         Useful
       </Button>
       <Button
-        variant={item.feedback?.verdict === "not_useful" ? "danger" : "ghost"}
+        variant={current === "not_useful" ? "danger" : "ghost"}
         className="px-2.5 py-1 text-xs"
         disabled={busy}
         onClick={() => void vote("not_useful")}
-        title="No — this should not have reached me"
+        title={current === "not_useful" ? "Click again to withdraw" : "No — this should not have reached me"}
       >
         Not useful
       </Button>

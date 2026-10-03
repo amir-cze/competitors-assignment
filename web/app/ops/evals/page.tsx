@@ -39,6 +39,15 @@ export default function OpsEvalsPage() {
     });
   }
 
+  async function removeGolden(g: Golden) {
+    if (!confirm(`Remove "${g.title}" from the golden set?`)) return;
+    await run(async () => {
+      await api(`/api/ops/evals/golden/${g.id}`, { method: "DELETE" });
+      golden.reload();
+      dash.reload();
+    });
+  }
+
   async function addManual(e: FormEvent) {
     e.preventDefault();
     await run(async () => {
@@ -157,6 +166,7 @@ export default function OpsEvalsPage() {
               <th className="px-4 py-3">Item</th>
               <th className="px-4 py-3">Labels</th>
               <th className="px-4 py-3">Origin</th>
+              <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
@@ -174,6 +184,11 @@ export default function OpsEvalsPage() {
                   ))}
                 </td>
                 <td className="px-4 py-3 font-mono text-xs">{g.origin}</td>
+                <td className="px-4 py-3 text-right">
+                  <Button variant="quiet" className="px-2 py-1 text-xs text-red-300" disabled={busy} onClick={() => void removeGolden(g)}>
+                    Remove
+                  </Button>
+                </td>
               </tr>
             ))}
           </tbody>

@@ -141,9 +141,17 @@ Not a tag. Three effects, none of them on the item you clicked:
 
 1. **Changes the prompt for the next item.** Each team's most recent votes (3 useful, 3 not useful, with reasons) are
    rendered into the system prompt as calibration examples. Takes effect on the next scoring call.
-2. **A disagreement becomes a permanent test case.** Useful on a filed item, or Not useful on a flagged one, promotes the
-   item into the golden set with your verdict as the label. Every eval from then on checks whether the prompt gets it right.
+2. **A disagreement becomes a permanent test case.** Useful on a *filed* item, or Not useful on a *flagged* one,
+   promotes the item into the golden set (origin `feedback`) with your verdict as the label. Every eval from then on
+   checks whether the prompt gets it right. **Agreements are not promoted** — Useful on something already flagged tells
+   the eval nothing — they count as calibration and in the live metrics only. So after voting Useful on flagged items the
+   golden set still reads "seed 18"; vote Useful on something in "Everything scanned" that was filed to see a promotion.
 3. **Feeds the live quality numbers** on `/ops/evals` — precision on flagged items, recall proxy on filed ones.
+
+**Undo.** Click the selected answer again on a card (or **Withdraw** on the item page) to clear the vote. If that vote
+had created a golden label, the label is removed too, and the golden item is deleted when no feedback labels remain.
+Seeded and hand-written golden items are never touched by a business click; the operator removes those on `/ops/evals`.
+Changing Useful → Not useful withdraws the old label before applying the new rule.
 
 Deliberately *not* done: rescoring the item, recalling a Slack message, moving thresholds. One downvote must not change
 what interrupts a whole team.
@@ -263,7 +271,8 @@ thinks*. That split is the answer to "prompt drift".
   from a bad week: v1 vs v2 on the same items.
 - **Disagreements** — every vote that contradicts the route (flagged-but-not-useful, filed-but-useful), with **Promote**
   to add it to the golden set (automatic for new votes; this handles older ones).
-- **Golden set** table with per-team labels, and **Add a labeled example** for hand-written cases.
+- **Golden set** table with per-team labels and origin (seed / feedback / manual), **Remove** per row, and
+  **Add a labeled example** for hand-written cases.
 
 ### 3.6 Ops alerts
 

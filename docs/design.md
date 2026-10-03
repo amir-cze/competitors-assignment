@@ -65,7 +65,7 @@ Different constraints, different picks: if the watchlist were 200+ JS-heavy site
 Useful is defined per team, so the loop is per team.
 
 1. **Every surfaced card can be marked useful / not useful**, with an optional reason. That mark is stored against the assessment, not as a free-floating comment.
-2. **A golden set** (seeded from real competitor posts, plus promotions from feedback) is scored offline against the active prompt version. Precision, recall and F1 are stored per team, per prompt version, with cost.
+2. **A golden set** (seeded from real competitor posts, plus every *disagreement* from feedback — a human overruling the route; agreements would test nothing) is scored offline against the active prompt version. Votes can be withdrawn, and withdrawing removes the label they created. Precision, recall and F1 are stored per team, per prompt version, with cost.
 3. **Live metrics** on `/ops/evals` compare thumbs to the route that was chosen: precision on what we interrupted people with, and a recall proxy for “useful but left in the archive.” Disagreements are a review queue; one click promotes them into the golden set.
 4. **Prompt versions** are immutable. Activating a new one is an operator action; the next eval run tells you if it won.
 

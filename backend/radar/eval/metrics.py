@@ -228,5 +228,22 @@ def promote_to_golden(
     return golden
 
 
+def withdraw_from_golden(session: Session, item_id: uuid.UUID, team_key: str) -> bool:
+    """Undo one team's feedback-derived label. Only touches golden items that feedback created;
+    seeded and hand-written examples are the operator's and are never changed by a business click.
+    Returns True if a label was removed."""
+    golden = session.scalar(select(EvalItem).where(EvalItem.item_id == item_id, EvalItem.origin == "feedback"))
+    if golden is None or team_key not in golden.labels:
+        return False
+    labels = dict(golden.labels)
+    labels.pop(team_key)
+    if labels:
+        golden.labels = labels
+    else:
+        session.delete(golden)
+    session.flush()
+    return True
+
+
 def eval_history(session: Session, limit: int = 20) -> list[EvalRun]:
     return list(session.scalars(select(EvalRun).order_by(EvalRun.run_at.desc()).limit(limit)).all())
