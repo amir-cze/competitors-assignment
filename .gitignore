@@ -28,3 +28,8 @@ Thumbs.db
 # local artifacts
 *.log
 docs/*.mp4
+
+# working notes, not part of the submission
+docs/bottlenecks-and-gaps.md
+docs/tutorial.md
+docs/video-script.md

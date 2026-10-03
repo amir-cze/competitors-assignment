@@ -83,7 +83,7 @@ Three product gaps I know about and chose not to half-build:
 - **Who saw what.** The brief's own pain is "nobody is quite sure who checked what." With a shared password there is no "seen by" or "assigned to"; Slack is the record today. This lands with SSO, not before it.
 - **Sales.** The brief mentions sales as the team that hears news days late. Immediate routing fixes the latency; a sales-shaped output ("what to say when a prospect brings this up") would be a fourth lens. Scoring is per team already, so it is a row in `teams` plus a "create team" button, not a redesign — I left it out because nobody asked for it yet.
 
-The first *scaling* change is structural rather than a feature: today the source is the unit of work, so one competitor’s big publishing day holds a lane for minutes. Splitting into a discovery stage (unit = source) and a processing stage (unit = item, claimed from `items.status = 'pending'`) fixes head-of-line blocking without a broker. Measured limits, the order of bottlenecks, and the known gaps are in [bottlenecks-and-gaps.md](bottlenecks-and-gaps.md).
+The first *scaling* change is structural rather than a feature: today the source is the unit of work, so one competitor’s big publishing day holds a lane for minutes. Splitting into a discovery stage (unit = source) and a processing stage (unit = item, claimed from `items.status = 'pending'`) fixes head-of-line blocking without a broker.
 
 ## Risks
 
