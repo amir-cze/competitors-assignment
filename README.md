@@ -73,5 +73,4 @@ CI (GitHub Actions) runs ruff, pytest against Postgres+pgvector, and a Next.js p
 ## Docs
 
 - [docs/design.md](docs/design.md) — architecture, choices, scale, quality loop, risks
-- [docs/backend-walkthrough.md](docs/backend-walkthrough.md) — what triggers a collection, the per-source pipeline, and how everything is stored
 - [docs/AI-usage.md](docs/AI-usage.md) — which assistants, for what
