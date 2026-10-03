@@ -14,6 +14,7 @@ from datetime import timedelta
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm.exc import StaleDataError
 
 from radar.assess.llm import BudgetExceeded
 from radar.assess.scoring import Scorer, load_context
@@ -38,6 +39,7 @@ from radar.models import (
     SystemState,
     Team,
     Topic,
+    new_id,
     utcnow,
 )
 from radar.ops_events import record_event
@@ -55,6 +57,15 @@ class RunLog:
 
     def add(self, msg: str, **data) -> None:
         self.lines.append({"t": utcnow().isoformat(timespec="seconds"), "msg": msg, **data})
+
+
+class SourceGone(Exception):
+    """Someone removed the competitor (or source) from the watchlist while this run was in progress.
+    Not an error: the rows we are writing to no longer exist, so stop and discard quietly."""
+
+
+def _source_exists(session: Session, source_id: uuid.UUID) -> bool:
+    return session.scalar(select(Source.id).where(Source.id == source_id)) is not None
 
 
 class Pipeline:
@@ -123,15 +134,47 @@ class Pipeline:
                     self._handle_items(session, source, run, rlog, result.items)
                     self._on_success(session, source, run, rlog, result, items_found=len(result.items))
                 run.status = "ok"
+        except SourceGone:
+            return self._abandon_run(session, source_id, trigger)
         except Exception as exc:
+            # A database error leaves the transaction unusable; start clean before recording the failure.
+            # Work is committed per item, so at most the current item is lost.
+            session.rollback()
+            if not _source_exists(session, source_id):
+                return self._abandon_run(session, source_id, trigger)
             log.exception("pipeline.crash", source_id=str(source.id))
             self._on_failure(session, source, run, rlog, f"{type(exc).__name__}: {exc}"[:500])
 
         run.finished_at = utcnow()
         run.log = rlog.lines
         source.claimed_at = None
-        session.commit()
+        try:
+            session.commit()
+        except StaleDataError:
+            # The source row vanished between our last check and this commit (removed from the watchlist).
+            return self._abandon_run(session, source_id, trigger)
         return run
+
+    @staticmethod
+    def _abandon_run(session: Session, source_id: uuid.UUID, trigger: str) -> Run:
+        session.rollback()
+        log.info("pipeline.source_removed_mid_run", source_id=str(source_id))
+        # The run row was cascade-deleted with the source; return a detached stand-in for the caller's log line.
+        now = utcnow()
+        return Run(
+            id=new_id(),
+            source_id=source_id,
+            trigger=trigger,
+            status="cancelled",
+            started_at=now,
+            finished_at=now,
+            items_found=0,
+            items_new=0,
+            items_assessed=0,
+            llm_cost_usd=0.0,
+            error="source removed from the watchlist while the run was in progress",
+            log=[],
+        )
 
     def score_pending_items(self, session: Session, limit: int = 20) -> int:
         """Second chance for items that were parked (budget, transient LLM failure)."""
@@ -235,7 +278,9 @@ class Pipeline:
                 with session.begin_nested():
                     item = self._ingest_one(session, source, raw, archive=raw.url not in to_score, rlog=rlog)
             except Exception as exc:
-                log.warning("pipeline.item_failed", url=raw.url, error=str(exc))
+                if not _source_exists(session, source.id):
+                    raise SourceGone from exc  # don't fail the remaining 30 items one by one
+                log.warning("pipeline.item_failed", url=raw.url, error=str(exc)[:300])
                 rlog.add("item failed", url=raw.url, error=str(exc)[:200])
                 continue
             if item is None:
@@ -343,7 +388,7 @@ class Pipeline:
             self._budget_event_once(session, str(exc))
             return None
         except Exception as exc:
-            log.warning("pipeline.score_failed", item_id=str(item.id), error=str(exc))
+            log.warning("pipeline.score_failed", item_id=str(item.id), error=str(exc)[:300])
             rlog.add("scoring failed", item=str(item.id), error=str(exc)[:200])
             item.status = "pending"
             return None
@@ -574,7 +619,8 @@ def claim_once(session: Session, job: str, *, period: str) -> bool:
         pg_insert(SystemState)
         .values(key=f"job:{job}:{period}", value={"claimed_at": utcnow().isoformat()})
         .on_conflict_do_nothing(index_elements=[SystemState.key])
-        .returning(SystemState.key)  # RETURNING yields no row on conflict; rowcount is unreliable for ORM inserts
+        # RETURNING yields no row on conflict; rowcount is unreliable for ORM inserts.
+        .returning(SystemState.key)
     )
     won = session.execute(stmt).first() is not None
     session.commit()

@@ -115,6 +115,7 @@ queue, the vector index and the store. The daily LLM budget *does* hold across r
 | No per-item "send to Slack" action | Items scored before Slack was connected are not retro-delivered | `POST /items/{id}/slack/{team}` writing to `deliveries` (idempotent) |
 | Heartbeat requires `HEALTHCHECK_URL` | Unset → "nobody checks it's running" is true of the design, not of the instance | One env var; healthchecks.io free tier |
 | Worker logs `tick skipped: maximum number of running instances` during long runs | Looks like an error; it is the one-tick-at-a-time guard | Cosmetic: lower the log level for that message |
+| Competitor removed while its first run is still scoring | Found in a real log: every remaining item failed on a foreign key and the final source update crashed the run. Now detected on the first failure; the run stops with one `source_removed_mid_run` line and no further model calls | Done. Remaining waste is the items already scored before the click; a "removing…" state that waits for in-flight runs would close that |
 
 ## What growth looks like
 

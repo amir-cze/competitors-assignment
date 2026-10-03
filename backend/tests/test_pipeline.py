@@ -86,6 +86,39 @@ def test_listing_to_assessments_to_slack(db, deps, fake_llm, fetcher, notifier, 
     assert "about us" in system and "runtime protection" in system  # default profile until the business edits it
 
 
+def test_competitor_removed_mid_run_is_abandoned_quietly(db, deps, fake_llm, fetcher, teams):
+    """Reproduces a real log: 'Remove' clicked on the watchlist while the first run was still scoring.
+    Every later item hit a foreign-key error and the final commit crashed. Now the run stops after the first."""
+    from sqlalchemy import delete
+
+    comp, src = make_competitor(db)
+    comp_id, src_id = comp.id, src.id  # the ORM objects become unusable once their rows are gone
+    fetcher.pages["https://acme.test/blog"] = LISTING
+    for slug in ("mcp-gateway-launch", "series-b", "webinar-invite"):
+        fetcher.pages[f"https://acme.test/blog/{slug}"] = article(slug, f"Body for {slug}. ")
+    fake_llm.scripted[ItemAssessmentOut] = [scripted("x", "other", {"marketing": 10, "product": 10, "rnd": 10})] * 3
+
+    real = fake_llm.complete_structured
+    calls = {"n": 0}
+
+    def remove_competitor_during_first_score(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            db.execute(delete(Competitor).where(Competitor.id == comp_id))
+            db.commit()  # the API's DELETE commits on its own connection; the test session must do the same
+        return real(*args, **kwargs)
+
+    fake_llm.complete_structured = remove_competitor_during_first_score
+
+    run = deps.pipeline.process_source(db, src_id)  # must not raise
+
+    assert run.status == "cancelled"
+    assert calls["n"] == 1  # scoring stopped after the first item; no wasted model calls
+    db.expunge_all()  # the deleted rows are still in the identity map; query the tables, not the objects
+    assert db.scalar(select(Item.id).where(Item.competitor_id == comp_id)) is None
+    assert db.scalar(select(Source.id).where(Source.id == src_id)) is None
+
+
 def test_company_profile_edit_reaches_the_prompt(db, deps, fake_llm, fetcher, teams):
     """The business, not an engineer, decides what "we sell" means; the next item is scored against it."""
     from radar.services import company
